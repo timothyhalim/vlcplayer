@@ -1,2 +1,4 @@
 venv
 vlclib
+*.pyc
+__pycache__

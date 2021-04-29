@@ -1,9 +1,15 @@
 import sys
+import os
 from PySide2.QtGui import QColor, QPainter
-from PySide2.QtCore import QEvent, QPoint, QRect, Qt, Signal
+from PySide2.QtCore import QEvent, QPoint, QRect, QTimer, Qt, Signal
 from PySide2.QtWidgets import QFrame, QLineEdit, QSizeGrip, QSlider, QStyle, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QApplication
 
+os.environ['PYTHON_VLC_MODULE_PATH'] = os.path.normpath(os.path.join(__file__, "..", "vlc"))
+os.environ['PYTHON_VLC_LIB_PATH'] = os.path.normpath(os.path.join(__file__, "..", "vlc", "libvlc.dll"))
 import vlc
+
+from component.ButtonIcon import ButtonIcon
+from component.TipSlider import TipSlider
 
 class Controller(QWidget):
     closed = Signal()
@@ -16,48 +22,48 @@ class Controller(QWidget):
 
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setObjectName("Master")
-        self.setStyleSheet("#Master {border : none;}")
 
         self.fillColor = QColor(0, 0, 0, 2)
         self.penColor = QColor(0, 0, 0, 2)
 
-        self.popup_fillColor = QColor(240, 240, 240, 255)
-        self.popup_penColor = QColor(200, 200, 200, 255)
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0,0,0,0)
 
+        self.resourcePath = os.path.normpath(os.path.join(__file__, "..", "resource")).replace("\\", "/")
+        
+        self.closeBtn = ButtonIcon(icon=f"{self.resourcePath}/cancel.svg", iconsize=15)
         self.closeLayout = QHBoxLayout()
         self.closeLayout.addStretch()
-        self.closeBtn = QPushButton("x", self)
-        self.closeBtn.setFixedSize(30,30)
         self.closeLayout.addWidget(self.closeBtn)
-        # self.closeBtn.setStyleSheet("background-color : rgba(0,0,0,0); color : white;")
-        self.closeBtn.clicked.connect(self._onclose)
 
+        self.playBtn = ButtonIcon(icon=f"{self.resourcePath}/play.svg", iconsize=100)
         self.playLayout = QHBoxLayout()
         self.playLayout.addStretch()
-        self.playBtn = QPushButton("P", self)
         self.playLayout.addWidget(self.playBtn)
         self.playLayout.addStretch()
-        # self.playBtn.setStyleSheet("background-color : rgba(0,0,0,0); color : white;")
-        self.playBtn.setFixedSize(100,100)
-        # self.playBtn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
 
         self.timeLayout = QHBoxLayout(self)
         self.startTime = QLineEdit(self)
         self.endTime = QLineEdit(self)
-        self.slider = QSlider(Qt.Horizontal, self)
-        for w in (self.startTime, self.slider, self.endTime):
-            self.timeLayout.addWidget(w)
+        self.timeLayout.addWidget(self.startTime)
+        self.timeLayout.addStretch()
+        self.timeLayout.addWidget(self.endTime)
+
+        self.timeSlider = TipSlider(Qt.Horizontal, self)
+        self.timeSlider.setMaximum(1000)
         
         layout.addLayout(self.closeLayout)
         layout.addStretch()
         layout.addLayout(self.playLayout)
         layout.addStretch()
         layout.addLayout(self.timeLayout)
+        layout.addWidget(self.timeSlider)
+
+        # Signal
+        self.closeBtn.clicked.connect(self._onclose)
+        self.playBtn.clicked.connect(self._onplay)
+
+        # Init
         self.toggleVisibility(False)
 
     def paintEvent(self, event):
@@ -75,14 +81,12 @@ class Controller(QWidget):
         p = self.parent()
         self.move(p.pos().x()+p._gripSize, p.pos().y()+p._gripSize)
         self.resize(p.width()-(p._gripSize*2), p.height()-(p._gripSize*2))
-        for w in (self.closeBtn, self.playBtn, self.startTime, self.endTime, self.slider):
-            if visible:
-                w.show()
-            else:
-                w.hide()
+        for w in (self.closeBtn, self.playBtn, self.startTime, self.endTime):
+            w.setVisible(visible)
+        self.timeSlider.setTipVisibility(visible)
+        self.timeSlider.setFixedHeight(8 if visible else 1)
 
     def event(self, event):
-        print(event.type())
         if event.type() == QEvent.Type.Enter:
             self.toggleVisibility(True)
         elif event.type() == QEvent.Type.Leave:
@@ -91,20 +95,21 @@ class Controller(QWidget):
         return super(Controller, self).event(event)
 
     def mousePressEvent(self, event):
-        print("Click")
         self.startPos = event.pos()
         return super(Controller, self).mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        print(event.pos())
         delta = event.pos()-self.startPos
         p = self.parent()
         self.move(self.pos()+delta)
         p.move(p.pos()+delta)
         return super(Controller, self).mouseMoveEvent(event)
 
+
+    def _onplay(self):
+        self.play.emit()
+
     def _onclose(self):
-        print("Close")
         self.closed.emit()
 
 
@@ -193,7 +198,11 @@ class VideoPlayer(QWidget):
         self.controller = None
         self.controllerOpen = False
 
-        self.playVideo(r"C:\Users\Public\Videos\Sample Videos\Wildlife.wmv")
+        self.timer = QTimer(self)
+        self.timer.setInterval(10)
+        self.timer.timeout.connect(self.updateUI)
+
+        self.playVideo(r"C:\Users\timot\Desktop\TLL_EP001_SH332.00_LAY.mov")
 
     def show(self):
         super(VideoPlayer, self).show()
@@ -247,7 +256,6 @@ class VideoPlayer(QWidget):
         self.cornerGrips[3].setGeometry(
             QRect(outRect.bottomLeft(), inRect.bottomLeft()+QPoint(offset,-offset)).normalized())
 
-
     def resizeEvent(self, event):
         self.updateGrips()
         if self.controllerOpen:
@@ -261,12 +269,15 @@ class VideoPlayer(QWidget):
         self.controller.move(pos.x()+self._gripSize, pos.y()+self._gripSize)
         self.controller.resize(self.width()-(self._gripSize*2), self.height()-(self._gripSize*2))
         self.controller.closed.connect(self.closeController)
+        self.controller.play.connect(self.play)
         self.controllerOpen = True
         self.controller.show()
 
     def closeController(self):
         self.controller.close()
         self.controllerOpen = False
+        self.timer.stop()
+        self.mediaplayer.pause()
         self.close()
 
     def playVideo(self, path):
@@ -274,9 +285,28 @@ class VideoPlayer(QWidget):
         self.media.parse()
         print(self.media.get_meta(1))
         self.mediaplayer.set_media(self.media)
-        self.mediaplayer.play()
         print("FPS:", self.mediaplayer.get_fps())
         print("Rate:", self.mediaplayer.get_rate())
+        self.play()
+
+    def updateUI(self):
+        media_pos = int((self.mediaplayer.get_position()+0.03) * 1000)
+        self.controller.timeSlider.setValue(media_pos)
+        
+    def play(self):
+        if self.mediaplayer.is_playing():
+            self.timer.stop()
+            self.mediaplayer.pause()
+        else:
+            self.timer.start()
+            self.mediaplayer.play()
+
+    def pause(self):
+        self.mediaplayer.pause()
+
+    def isPlaying(self):
+        self.mediaplayer.is_playing()
+
 
 
 if __name__ == '__main__':
