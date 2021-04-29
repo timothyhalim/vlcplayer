@@ -1,8 +1,7 @@
 import sys
 from PySide2.QtGui import QColor, QPainter
-from PySide2.QtCore import QEvent, QRect, Qt, Signal
+from PySide2.QtCore import QEvent, QPoint, QRect, Qt, Signal
 from PySide2.QtWidgets import QFrame, QLineEdit, QSizeGrip, QSlider, QStyle, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QApplication
-
 
 import vlc
 
@@ -17,9 +16,11 @@ class Controller(QWidget):
 
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setObjectName("Master")
+        self.setStyleSheet("#Master {border : none;}")
 
         self.fillColor = QColor(0, 0, 0, 2)
-        self.penColor = QColor("#333333")
+        self.penColor = QColor(0, 0, 0, 2)
 
         self.popup_fillColor = QColor(240, 240, 240, 255)
         self.popup_penColor = QColor(200, 200, 200, 255)
@@ -72,8 +73,8 @@ class Controller(QWidget):
 
     def toggleVisibility(self, visible=True):
         p = self.parent()
-        self.move(p.pos().x()+5, p.pos().y()+5)
-        self.resize(p.width()-10, p.height()-10)
+        self.move(p.pos().x()+p._gripSize, p.pos().y()+p._gripSize)
+        self.resize(p.width()-(p._gripSize*2), p.height()-(p._gripSize*2))
         for w in (self.closeBtn, self.playBtn, self.startTime, self.endTime, self.slider):
             if visible:
                 w.show()
@@ -95,7 +96,7 @@ class Controller(QWidget):
         return super(Controller, self).mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        print (event.pos())
+        print(event.pos())
         delta = event.pos()-self.startPos
         p = self.parent()
         self.move(self.pos()+delta)
@@ -166,9 +167,9 @@ class VideoPlayer(QWidget):
 
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setObjectName("Master")
-        self.setStyleSheet("#Master {background-color : white;}")
+        self.setStyleSheet("#Master {background-color : transparent;}")
 
-        self._gripSize = 2
+        self._gripSize = 1
         self.sideGrips = [
             SideGrip(self, Qt.LeftEdge), 
             SideGrip(self, Qt.TopEdge), 
@@ -185,20 +186,18 @@ class VideoPlayer(QWidget):
         self.mediaplayer.set_hwnd(int(self.mediaContainer.winId()))
 
         hbox = QVBoxLayout(self)
-        hbox.setContentsMargins(2,2,2,2)
+        hbox.setContentsMargins(self._gripSize,self._gripSize,self._gripSize,self._gripSize)
         hbox.addWidget(self.mediaContainer)
-        # hbox.addWidget(self._popup)
-        # hbox.addWidget(self._close)
         self.setLayout(hbox)
 
-        self._popframe = None
-        self._popflag = False
+        self.controller = None
+        self.controllerOpen = False
 
         self.playVideo(r"C:\Users\Public\Videos\Sample Videos\Wildlife.wmv")
 
     def show(self):
         super(VideoPlayer, self).show()
-        self._onpopup()
+        self.showController()
 
     @property
     def gripSize(self):
@@ -218,53 +217,56 @@ class VideoPlayer(QWidget):
         inRect = outRect.adjusted(self.gripSize, self.gripSize,
             -self.gripSize, -self.gripSize)
 
-        # top left
-        self.cornerGrips[0].setGeometry(
-            QRect(outRect.topLeft(), inRect.topLeft()))
-        # top right
-        self.cornerGrips[1].setGeometry(
-            QRect(outRect.topRight(), inRect.topRight()).normalized())
-        # bottom right
-        self.cornerGrips[2].setGeometry(
-            QRect(inRect.bottomRight(), outRect.bottomRight()))
-        # bottom left
-        self.cornerGrips[3].setGeometry(
-            QRect(outRect.bottomLeft(), inRect.bottomLeft()).normalized())
+        offset = 10
 
         # left edge
         self.sideGrips[0].setGeometry(
-            0, inRect.top(), self.gripSize, inRect.height())
+            0, inRect.top()+offset, self.gripSize, inRect.height()-offset)
         # top edge
         self.sideGrips[1].setGeometry(
-            inRect.left(), 0, inRect.width(), self.gripSize)
+            inRect.left()+offset, 0, inRect.width()-offset, self.gripSize)
         # right edge
         self.sideGrips[2].setGeometry(
             inRect.left() + inRect.width(), 
-            inRect.top(), self.gripSize, inRect.height())
+            inRect.top()+offset, self.gripSize, inRect.height()-offset)
         # bottom edge
         self.sideGrips[3].setGeometry(
-            self.gripSize, inRect.top() + inRect.height(), 
-            inRect.width(), self.gripSize)
+            self.gripSize+offset, inRect.top() + inRect.height(), 
+            inRect.width()-offset, self.gripSize)
+
+        # top left
+        self.cornerGrips[0].setGeometry(
+            QRect(outRect.topLeft(), inRect.topLeft()+QPoint(offset,offset)))
+        # top right
+        self.cornerGrips[1].setGeometry(
+            QRect(outRect.topRight(), inRect.topRight()+QPoint(-offset,offset)).normalized())
+        # bottom right
+        self.cornerGrips[2].setGeometry(
+            QRect(outRect.bottomRight(), inRect.bottomRight()+QPoint(-offset,-offset)).normalized())
+        # bottom left
+        self.cornerGrips[3].setGeometry(
+            QRect(outRect.bottomLeft(), inRect.bottomLeft()+QPoint(offset,-offset)).normalized())
+
 
     def resizeEvent(self, event):
         self.updateGrips()
-        if self._popflag:
+        if self.controllerOpen:
             pos = self.pos()
-            self._popframe.move(pos.x()+5, pos.y()+5)
-            self._popframe.resize(self.width()-10, self.height()-10)
+            self.controller.move(pos.x()+self._gripSize, pos.y()+self._gripSize)
+            self.controller.resize(self.width()-(self._gripSize*2), self.height()-(self._gripSize*2))
 
-    def _onpopup(self):
+    def showController(self):
         pos = self.pos()
-        self._popframe = Controller(self)
-        self._popframe.move(pos.x()+5, pos.y()+5)
-        self._popframe.resize(self.width()-10, self.height()-10)
-        self._popframe.closed.connect(self._closepopup)
-        self._popflag = True
-        self._popframe.show()
+        self.controller = Controller(self)
+        self.controller.move(pos.x()+self._gripSize, pos.y()+self._gripSize)
+        self.controller.resize(self.width()-(self._gripSize*2), self.height()-(self._gripSize*2))
+        self.controller.closed.connect(self.closeController)
+        self.controllerOpen = True
+        self.controller.show()
 
-    def _closepopup(self):
-        self._popframe.close()
-        self._popflag = False
+    def closeController(self):
+        self.controller.close()
+        self.controllerOpen = False
         self.close()
 
     def playVideo(self, path):
