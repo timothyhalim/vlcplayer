@@ -5,7 +5,7 @@ from PySide2.QtWidgets import QPushButton
 import os
 
 class ButtonIcon(QPushButton):
-    def __init__(self, label=None, icon="", iconsize=40, inactive=(200, 200, 200), active=(255, 0, 0), duration=300):
+    def __init__(self, label=None, icon="", iconsize=40, inactive=(255, 255, 255), active=(255, 0, 0), duration=300):
         super(ButtonIcon, self).__init__()
 
         self.activeColor = QColor(active[0], active[1], active[2])

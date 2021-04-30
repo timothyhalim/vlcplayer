@@ -33,52 +33,66 @@ class TimeSlider(QSlider):
             pos_local = rectHandle.topLeft() + self.offset
             pos_global = self.mapToGlobal(pos_local)
             currentms = self.maxTime * (float(self.value()) / 1000)
-            currentTime = f"{int(currentms / (1000*60*60)) % 24:02d}:{int(currentms / (1000*60)) % 60:02d}:{(currentms / (1000)) % 60:05.02f}"
+            currentTime = f"{int(currentms / (1000*60*60)) % 24:02d}:{int(currentms / (1000*60)) % 60:02d}:{(currentms / (1000)) % 60:04.02f}"
             self.tip = QToolTip.showText(pos_global, currentTime, self)
 
     def qss(self):
         return """
-            QSlider::handle:horizontal {
+            QSlider::handle:horizontal, QSlider::handle:vertical {
                 background: #FF0000;
-                width: 8px;
-                border: 2px solid #aa0000;
                 border-radius: 0px;
             }
-
-            QSlider::groove:horizontal {
-                border: 1px solid #444444;
+            QSlider::handle:horizontal {
+                width: 8px;
                 height: 8px;
+            }
+            QSlider::handle:vertical {
+                width: 8px;
+                height: 8px;
+            }
+
+            QSlider::groove:horizontal, QSlider::groove:vertical {
+                border: 1px solid transparent;
                 background: transparent;
             }
-
-            QSlider::sub-page:horizontal {
-                background: #aa0000;
-                border: 1px solid transparent;
-                padding-right: 24px; 
-                border-top-right-radius: 4px;
-                border-bottom-right-radius: 4px;
+            QSlider::groove:horizontal {
                 height: 8px;
             }
-
-            QSlider::handle:horizontal:hover {
-                background: #FF0000;
-                height: 8px;
+            QSlider::groove:vertical {
+                background: #aa0000;
                 width: 8px;
+            }
+
+
+            QSlider::sub-page:horizontal, QSlider::sub-page:vertical {
+                background: #aa0000;
+                border: 1px solid transparent;
+            }
+            QSlider::sub-page:horizontal {
+                height: 8px;
+            }
+            QSlider::sub-page:vertical {
+                background: black;
+                width: 8px;
+            }
+
+            QSlider::handle:horizontal:hover, QSlider::handle:vertical:hover {
+                background: #FF0000;
                 border: 0px solid #aa0000;
                 border-radius: 4px;
             }
 
-            QSlider::sub-page:horizontal:disabled {
+            QSlider::sub-page:horizontal:disabled, QSlider::sub-page:vertical:disabled {
                 background: #bbbbbb;
                 border-color: #999999;
             }
 
-            QSlider::add-page:horizontal:disabled {
+            QSlider::add-page:horizontal:disabled, QSlider::add-page:vertical:disabled {
                 background: #2a82da;
                 border-color: #999999;
             }
 
-            QSlider::handle:horizontal:disabled {
+            QSlider::handle:horizontal:disabled, QSlider::handle:horizontal:disabled {
             background: #2a82da;
             }
             """
