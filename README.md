@@ -18,12 +18,11 @@ This project was created for fun only.</p>
 
 ## <b>Todo</b>
 Priority :
-- Key press event left or right to scrub frame, and up or down for volume
-- Organize code make it easy to maintain
+- Enable seek after video is finished
 - Right Click Menu
 - Option to use Frame instead of Time
 - Animate visibility on hover or leave
-- More intuitive time slider currently hard to pick
+- Key press event left or right to scrub frame, and up or down for volume
 
 Future :
 - Overlay 2 video
@@ -40,8 +39,14 @@ Done :
 - Double Click Fullscreen
 - Volume Control
 - Timeslider seek to change video current time
+- Hide cursor after idle for 5 second
+- Play/Pause on click
 
 
 ## <b>License</b>
 
 Released under the GNU General Public License (GPL, or “free software”).
+
+## Credits
+- Icon Pack by <a href="https://www.flaticon.com/packs/music-player-icons?k=1619703368307" style="color: White;">Chanut</a>
+- Sample Video by <a href="https://www.pexels.com/video/waves-crashing-on-rocks-2155942/" style="color: White;">Miles</a>

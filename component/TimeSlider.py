@@ -2,7 +2,7 @@ from PySide2.QtCore import QPoint
 from PySide2.QtWidgets import QApplication, QSlider, QStyleOptionSlider, QToolTip
 
 class TimeSlider(QSlider):
-    def __init__(self, *args, maxTime=1, offset=QPoint(-25, 20)):
+    def __init__(self, *args, maxTime=1, offset=QPoint(-25, -45)):
         super(TimeSlider, self).__init__(*args)
         self.offset = offset
 
@@ -14,7 +14,6 @@ class TimeSlider(QSlider):
 
         self.valueChanged.connect(self.show_tip)
         self.enterEvent = self.show_tip
-        # self.mouseReleaseEvent = self.show_tip
         self.setTipVisibility(True)
 
         self.setStyleSheet(self.qss())
@@ -32,7 +31,7 @@ class TimeSlider(QSlider):
 
             pos_local = rectHandle.topLeft() + self.offset
             pos_global = self.mapToGlobal(pos_local)
-            currentms = self.maxTime * (float(self.value()) / 1000)
+            currentms = self.maxTime * (float(self.value()) / self.maximum())
             currentTime = f"{int(currentms / (1000*60*60)) % 24:02d}:{int(currentms / (1000*60)) % 60:02d}:{(currentms / (1000)) % 60:04.02f}"
             self.tip = QToolTip.showText(pos_global, currentTime, self)
 
@@ -45,18 +44,25 @@ class TimeSlider(QSlider):
                 width: 16px;
                 height: 16px;
             }
+            QSlider::handle:horizontal {
+                margin-top: -7px;
+                margin-bottom: -7px;
+            }
+            QSlider::handle:vertical {
+                margin-left: -7px;
+                margin-right: -7px;
+            }
 
             QSlider::groove:horizontal, QSlider::groove:vertical {
                 border-color: transparent;
                 background: transparent;
             }
             QSlider::groove:horizontal {
-                height: 16px;
+                height: 2px;
             }
             QSlider::groove:vertical {
                 background: #aa0000;
-                width: 16px;
-                border-radius: 8px;
+                width: 2px;
             }
 
             QSlider::sub-page:horizontal, QSlider::sub-page:vertical {
@@ -64,14 +70,12 @@ class TimeSlider(QSlider):
                 border-color: transparent;
             }
             QSlider::sub-page:horizontal {
-                height: 16px;
-                margin-top:7px;
-                margin-bottom:7px;
+                height: 2px;
             }
             QSlider::sub-page:vertical {
                 background: black;
-                width: 16px;
-                border-radius: 8px;
+                width: 2px;
+                border-radius: 1px;
             }
 
             QSlider::handle:horizontal:hover, QSlider::handle:vertical:hover {

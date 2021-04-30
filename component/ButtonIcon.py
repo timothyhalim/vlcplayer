@@ -73,14 +73,14 @@ class ButtonIcon(QPushButton):
                 self.leaveAnimation.stop()
                 current = sum([self.getColor().redF(), self.getColor().greenF(), self.getColor().blueF()])
                 target = sum([self.activeColor.redF(), self.activeColor.greenF(), self.activeColor.blueF()])
-                self.hoverAnimation = self.animate(self.getColor(), self.activeColor, (target-current)*self.animDuration, self.animationCallback)
+                self.hoverAnimation = self.animate(self.getColor(), self.activeColor, max(target-current, 0)*self.animDuration, self.animationCallback)
             self.hoverAnimation.start()
         elif event.type() == QEvent.Type.Leave:
             if self.hoverAnimation.state() == QAbstractAnimation.State.Running:
                 self.hoverAnimation.stop()
                 current = max([self.getColor().redF(), self.getColor().greenF(), self.getColor().blueF()])
                 target = max([self.inactiveColor.redF(), self.inactiveColor.greenF(), self.inactiveColor.blueF()])
-                self.leaveAnimation = self.animate(self.getColor(), self.inactiveColor, (current-target)*self.animDuration, self.animationCallback)
+                self.leaveAnimation = self.animate(self.getColor(), self.inactiveColor, max(current-target, 0)*self.animDuration, self.animationCallback)
             self.leaveAnimation.start()
         elif event.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick]:
             pressColor = QColor(

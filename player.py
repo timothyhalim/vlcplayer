@@ -1,8 +1,9 @@
 import sys
 import os
-from PySide2.QtGui import QColor, QFont, QPainter, QPen
-from PySide2.QtCore import QEvent, QPoint, QRect, QTimer, QUrl, Qt, Signal
-from PySide2.QtWidgets import QFrame, QLineEdit, QSizeGrip, QSlider, QVBoxLayout, QWidget, QHBoxLayout, QApplication
+from datetime import datetime
+from PySide2.QtGui import QColor, QPainter, QPen
+from PySide2.QtCore import QEvent, QTimer, Qt
+from PySide2.QtWidgets import QLabel, QSlider, QVBoxLayout, QWidget, QHBoxLayout, QApplication
 
 try:
     fileDir = os.path.dirname(__file__)
@@ -13,7 +14,7 @@ except:
 pyVersion = float(f"{sys.version_info[0]}.{sys.version_info[1]}")
 vlcdir = os.path.normpath(os.path.join(fileDir, "vlc"))
 if pyVersion >= 3.8:
-    os.path.add_dll_directory(vlcdir)
+    os.add_dll_directory(vlcdir)
 else:
     if not vlcdir in sys.path:
         sys.path.append(vlcdir)
@@ -25,6 +26,7 @@ import vlc
 
 from component.ButtonIcon import ButtonIcon
 from component.TimeSlider import TimeSlider
+from component.FrameWidget import FrameWidget
 
 class Controller(QWidget):
     def __init__(self, parent):
@@ -34,6 +36,8 @@ class Controller(QWidget):
 
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_Hover)
+        self.setMouseTracking(True)
         self.setAcceptDrops(True)
 
         self.fillColor = QColor(127, 127, 127, 2)
@@ -90,11 +94,12 @@ class Controller(QWidget):
         self.volumeSlider.valueChanged.connect(self.setVolume)
         self.timeSlider.sliderMoved.connect(self.setFrame)
         self.timeSlider.sliderMoved.connect(self.setFrame)
-        # self.timeSlider.sliderPressed.connect(self.hold)
-        # self.timeSlider.sliderReleased.connect(self.hold)
+        self.timeSlider.sliderPressed.connect(self.seek)
+        self.timeSlider.sliderReleased.connect(self.seek)
 
     def initUI(self):
         # Init
+        self.visible = False
         self.toggleVisibility(False)
 
     def paintEvent(self, event):
@@ -135,6 +140,7 @@ class Controller(QWidget):
 
     def event(self, event):
         if event.type() == QEvent.Type.Enter:
+            self.lastMove = datetime.now()
             self.toggleVisibility(True)
         elif event.type() == QEvent.Type.Leave:
             self.toggleVisibility(False)
@@ -143,15 +149,21 @@ class Controller(QWidget):
 
     def mousePressEvent(self, event):
         self.startPos = event.pos()
+        self.lastClick = datetime.now()
         return super(Controller, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
         if hasattr(self, "startPos"):
+            if (datetime.now() - self.lastClick).microseconds/1000 < 100:
+                self.play()
             delattr(self, "startPos")
         return super().mouseReleaseEvent(event)
-    
+
     def mouseMoveEvent(self, event):
-        if hasattr(self, "startPos"):
+        self.lastMove = datetime.now()
+        self.lastPos = event.pos()
+        self.toggleVisibility(True)
+        if hasattr(self, "startPos") and not (self.parent().windowState() & Qt.WindowFullScreen):
             delta = event.pos()-self.startPos
             p = self.parent()
             self.move(self.pos()+delta)
@@ -194,36 +206,42 @@ class Controller(QWidget):
         return super().wheelEvent(event)
 
     def close(self):
-        self.parent().close()
         self.timer.stop()
         self.mediaPlayer.pause()
+        self.parent().close()
         return super().close()
 
     def toggleVisibility(self, visible=True):
+        if self.visible == visible:
+            return
+        self.visible = visible
+        if visible:
+            self.setCursor(Qt.ArrowCursor)
         p = self.parent()
-        self.move(p.pos().x()+p._gripSize, p.pos().y()+p._gripSize)
-        self.resize(p.width()-(p._gripSize*2), p.height()-(p._gripSize*2))
+        self.move(p.pos().x()+p.gripSize, p.pos().y()+p.gripSize)
+        self.resize(p.width()-(p.gripSize*2), p.height()-(p.gripSize*2))
         for w in (self.closeBtn, self.playBtn, self.volumeSlider):
             w.setVisible(visible)
         self.timeSlider.setTipVisibility(visible)
         self.timeSlider.setFixedHeight(16 if visible else 1)
 
     def setFullscreen(self):
-        if self.parent().windowState() & Qt.WindowFullScreen:
-            # QApplication.setOverrideCursor(Qt.ArrowCursor)
+        if self.parent().isFullScreen():
             self.parent().showNormal()
         else:
             self.parent().showFullScreen()
-            # QApplication.setOverrideCursor(Qt.BlankCursor)
         self.parent().controllerResize()
 
     def updateUI(self):
         media_pos = self.mediaPlayer.get_position()
-        slider_pos = int((media_pos+(0.03*media_pos)) * 1000)
+        slider_pos = int((media_pos+(0.03*media_pos)) * self.timeSlider.maximum())
         self.timeSlider.setValue(slider_pos)
         
-    def playSample(self):
-        self.createMedia(os.path.join(fileDir, "sample.mov"))
+        if (datetime.now() - self.lastMove).seconds >= 5 :
+            self.setCursor(Qt.BlankCursor)
+            self.toggleVisibility(False)
+        else:
+            self.setCursor(Qt.ArrowCursor)
 
     def createMedia(self, path):
         self.media = self.vlc.media_new(path)
@@ -231,7 +249,6 @@ class Controller(QWidget):
         print(self.media.get_meta(1))
         self.mediaPlayer.set_media(self.media)
         print("FPS:", self.mediaPlayer.get_fps())
-        print("Rate:", self.mediaPlayer.get_rate())
         print("Ratio:", self.mediaPlayer.video_get_width()/self.mediaPlayer.video_get_height())
         print("Duration", self.media.get_duration())
         print("Frames", int(self.media.get_duration()/1000*self.mediaPlayer.get_fps()))
@@ -239,6 +256,7 @@ class Controller(QWidget):
 
         duration = self.media.get_duration()
         self.timeSlider.setMaxTime(duration)
+        self.timeSlider.setMaximum(int(self.media.get_duration()/1000*self.mediaPlayer.get_fps()))
         self.play()
 
     def isPlaying(self):
@@ -256,93 +274,28 @@ class Controller(QWidget):
                 self.timer.start()
                 self.playBtn.changeIcon(f"{self.resourcePath}/pause.svg")
                 self.mediaPlayer.play()
-
-    def hold(self):
-        if self.mediaPlaying:
-            self.timer.stop()
-            self.mediaPlayer.pause()
         else:
-            self.timer.start()
-            self.mediaPlayer.play()
+            self.createMedia(os.path.join(fileDir, "sample.mov"))
+
+    def seek(self):
+        if self.mediaPlayer.is_playing():
+            if self.timer.isActive():
+                self.timer.stop()
+            else:
+                self.timer.start()
 
     def setFrame(self, frame):
-        self.mediaPlayer.set_position(frame / 1000.0)
+        self.mediaPlayer.set_position(frame / self.timeSlider.maximum())
 
     def setVolume(self, volume):
         self.mediaPlayer.audio_set_volume(volume)
 
-
-class SideGrip(QWidget):
-    def __init__(self, parent, edge):
-        QWidget.__init__(self, parent)
-        if edge == Qt.LeftEdge:
-            self.setCursor(Qt.SizeHorCursor)
-            self.resizeFunc = self.resizeLeft
-        elif edge == Qt.TopEdge:
-            self.setCursor(Qt.SizeVerCursor)
-            self.resizeFunc = self.resizeTop
-        elif edge == Qt.RightEdge:
-            self.setCursor(Qt.SizeHorCursor)
-            self.resizeFunc = self.resizeRight
-        else:
-            self.setCursor(Qt.SizeVerCursor)
-            self.resizeFunc = self.resizeBottom
-        self.mousePos = None
-
-    def resizeLeft(self, delta):
-        window = self.window()
-        width = max(window.minimumWidth(), window.width() - delta.x())
-        geo = window.geometry()
-        geo.setLeft(geo.right() - width)
-        window.setGeometry(geo)
-
-    def resizeTop(self, delta):
-        window = self.window()
-        height = max(window.minimumHeight(), window.height() - delta.y())
-        geo = window.geometry()
-        geo.setTop(geo.bottom() - height)
-        window.setGeometry(geo)
-
-    def resizeRight(self, delta):
-        window = self.window()
-        width = max(window.minimumWidth(), window.width() + delta.x())
-        window.resize(width, window.height())
-
-    def resizeBottom(self, delta):
-        window = self.window()
-        height = max(window.minimumHeight(), window.height() + delta.y())
-        window.resize(window.width(), height)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.mousePos = event.pos()
-
-    def mouseMoveEvent(self, event):
-        if self.mousePos is not None:
-            delta = event.pos() - self.mousePos
-            self.resizeFunc(delta)
-
-    def mouseReleaseEvent(self, event):
-        self.mousePos = None
-
-class VideoPlayer(QWidget):
+class VideoPlayer(FrameWidget):
     def __init__(self, parent=None):
         super(VideoPlayer, self).__init__(parent)
 
-        self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
-        self.setObjectName("Master")
-        self.setStyleSheet("#Master {background-color : transparent;}")
-
-        self._gripSize = 1
-        self.sideGrips = [
-            SideGrip(self, Qt.LeftEdge), 
-            SideGrip(self, Qt.TopEdge), 
-            SideGrip(self, Qt.RightEdge), 
-            SideGrip(self, Qt.BottomEdge), 
-        ]
-        self.cornerGrips = [QSizeGrip(self) for i in range(4)]
-
-        self.mediaContainer = QFrame()
+        self.mediaContainer = QLabel()
+        self.mediaContainer.setStyleSheet("background:black;")
         self.mediaContainer.setAttribute(Qt.WA_TranslucentBackground, False)
         self.mediaContainer.setObjectName("Video")
         self.vlc = vlc.Instance()
@@ -350,91 +303,23 @@ class VideoPlayer(QWidget):
         self.mediaPlayer.set_hwnd(int(self.mediaContainer.winId()))
 
         hbox = QVBoxLayout(self)
-        hbox.setContentsMargins(self._gripSize,self._gripSize,self._gripSize,self._gripSize)
+        hbox.setContentsMargins(self.gripSize,self.gripSize,self.gripSize,self.gripSize)
         hbox.addWidget(self.mediaContainer)
         self.setLayout(hbox)
 
         self.controller = Controller(self)
 
-        self.setRatio(1280/720)
-
     def show(self):
         super(VideoPlayer, self).show()
         self.controller.show()
 
-    @property
-    def gripSize(self):
-        return self._gripSize
-
-    def setGripSize(self, size):
-        if size == self._gripSize:
-            return
-        self._gripSize = max(2, size)
-        self.updateGrips()
-
-    def updateGrips(self):
-        self.setContentsMargins(*[self.gripSize] * 4)
-
-        outRect = self.rect()
-        # an "inner" rect used for reference to set the geometries of size grips
-        inRect = outRect.adjusted(self.gripSize, self.gripSize,
-            -self.gripSize, -self.gripSize)
-
-        offset = 10
-
-        # left edge
-        self.sideGrips[0].setGeometry(
-            0, inRect.top()+offset, self.gripSize, inRect.height()-offset)
-        # top edge
-        self.sideGrips[1].setGeometry(
-            inRect.left()+offset, 0, inRect.width()-offset, self.gripSize)
-        # right edge
-        self.sideGrips[2].setGeometry(
-            inRect.left() + inRect.width(), 
-            inRect.top()+offset, self.gripSize, inRect.height()-offset)
-        # bottom edge
-        self.sideGrips[3].setGeometry(
-            self.gripSize+offset, inRect.top() + inRect.height(), 
-            inRect.width()-offset, self.gripSize)
-
-        # top left
-        self.cornerGrips[0].setGeometry(
-            QRect(outRect.topLeft(), inRect.topLeft()+QPoint(offset,offset)))
-        # top right
-        self.cornerGrips[1].setGeometry(
-            QRect(outRect.topRight(), inRect.topRight()+QPoint(-offset,offset)).normalized())
-        # bottom right
-        self.cornerGrips[2].setGeometry(
-            QRect(outRect.bottomRight(), inRect.bottomRight()+QPoint(-offset,-offset)).normalized())
-        # bottom left
-        self.cornerGrips[3].setGeometry(
-            QRect(outRect.bottomLeft(), inRect.bottomLeft()+QPoint(offset,-offset)).normalized())
-
-    def setRatio(self, ratio=None):
-        if ratio:
-            self.ratio = ratio
-        self.keepRatio(self.size())
-
-    def keepRatio(self, size):
-        newHeight = size.width()/self.ratio
-        newHeight -= newHeight%1
-        newHeight += 1
-        if self.height() == newHeight:
-            return
-        self.resize(size.width(), newHeight)
-
     def resizeEvent(self, event):
-        if event.size() == event.oldSize():
-            return
-        else:
-            self.keepRatio(event.size())
-        
-        self.updateGrips()
+        super(VideoPlayer, self).resizeEvent(event)
         self.controllerResize()
 
     def controllerResize(self):
-        self.controller.move(self.pos().x()+(self._gripSize), self.pos().y()+(self._gripSize))
-        self.controller.resize(self.width()-(self._gripSize*2), self.height()-(self._gripSize*2))
+        self.controller.move(self.pos().x()+(self.gripSize)+1, self.pos().y()+(self.gripSize)+1)
+        self.controller.resize(self.width()-(self.gripSize*2)-2, self.height()-(self.gripSize*2)-2)
 
 if __name__ == '__main__':
     import sys
