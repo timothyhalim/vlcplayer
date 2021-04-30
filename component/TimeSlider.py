@@ -2,12 +2,12 @@ from PySide2.QtCore import QPoint
 from PySide2.QtWidgets import QApplication, QSlider, QStyleOptionSlider, QToolTip
 
 class TimeSlider(QSlider):
-    def __init__(self, *args, maxTime=1, offset=QPoint(-25, 0)):
+    def __init__(self, *args, maxTime=1, offset=QPoint(-25, 20)):
         super(TimeSlider, self).__init__(*args)
         self.offset = offset
 
         self.setMaxTime(maxTime)
-        self.setFixedHeight(8)
+        self.setFixedHeight(16)
         self.style = QApplication.style()
         self.opt = QStyleOptionSlider()
         self.setMaximum(1000)
@@ -40,46 +40,44 @@ class TimeSlider(QSlider):
         return """
             QSlider::handle:horizontal, QSlider::handle:vertical {
                 background: #FF0000;
-                border-radius: 0px;
-            }
-            QSlider::handle:horizontal {
-                width: 8px;
-                height: 8px;
-            }
-            QSlider::handle:vertical {
-                width: 8px;
-                height: 8px;
+                border-color: transparent;
+                border-radius: 8px;
+                width: 16px;
+                height: 16px;
             }
 
             QSlider::groove:horizontal, QSlider::groove:vertical {
-                border: 1px solid transparent;
+                border-color: transparent;
                 background: transparent;
             }
             QSlider::groove:horizontal {
-                height: 8px;
+                height: 16px;
             }
             QSlider::groove:vertical {
                 background: #aa0000;
-                width: 8px;
+                width: 16px;
+                border-radius: 8px;
             }
-
 
             QSlider::sub-page:horizontal, QSlider::sub-page:vertical {
                 background: #aa0000;
-                border: 1px solid transparent;
+                border-color: transparent;
             }
             QSlider::sub-page:horizontal {
-                height: 8px;
+                height: 16px;
+                margin-top:7px;
+                margin-bottom:7px;
             }
             QSlider::sub-page:vertical {
                 background: black;
-                width: 8px;
+                width: 16px;
+                border-radius: 8px;
             }
 
             QSlider::handle:horizontal:hover, QSlider::handle:vertical:hover {
                 background: #FF0000;
-                border: 0px solid #aa0000;
-                border-radius: 4px;
+                border-color: transparent;
+                border-radius: 8px;
             }
 
             QSlider::sub-page:horizontal:disabled, QSlider::sub-page:vertical:disabled {

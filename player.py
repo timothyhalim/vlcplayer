@@ -206,7 +206,7 @@ class Controller(QWidget):
         for w in (self.closeBtn, self.playBtn, self.volumeSlider):
             w.setVisible(visible)
         self.timeSlider.setTipVisibility(visible)
-        self.timeSlider.setFixedHeight(8 if visible else 1)
+        self.timeSlider.setFixedHeight(16 if visible else 1)
 
     def setFullscreen(self):
         if self.parent().windowState() & Qt.WindowFullScreen:
