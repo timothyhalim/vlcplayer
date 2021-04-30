@@ -11,25 +11,23 @@ class ButtonIcon(QPushButton):
         self.activeColor = QColor(active[0], active[1], active[2])
         self.inactiveColor = QColor(inactive[0], inactive[1], inactive[2])
         self.animDuration = duration
+        self.iconResolution = iconsize
         
         self.setStyleSheet("background-color : transparent;")
         
-        self.setFixedSize(iconsize+5,iconsize+5)
+        self.setFixedSize(self.iconResolution+5,self.iconResolution+5)
         self.setCursor(QCursor(Qt.PointingHandCursor))
-        self.iconPath = icon
-        if os.path.isfile(self.iconPath):
-            self.px = QPixmap(self.iconPath)
-            self.px.scaled(iconsize, iconsize, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.px_mask = self.px.createMaskFromColor(QColor('transparent'))
+        self.changeIcon(icon)
+        if hasattr(self, "px_mask"):
             self.px.fill(self.inactiveColor)
             self.px.setMask(self.px_mask)
             
             self.setIcon(QIcon(self.px))
-            self.setIconSize(QSize(iconsize, iconsize))
+            self.setIconSize(QSize(self.iconResolution, self.iconResolution))
 
         if isinstance(label, str):
             font = self.font()
-            font.setPointSize(iconsize/10)
+            font.setPointSize(self.iconResolution/10)
             self.setFont(font)
             self.setText(label)
             
@@ -37,6 +35,15 @@ class ButtonIcon(QPushButton):
             self.setColor(self.inactiveColor)
             self.hoverAnimation = self.animate(self.inactiveColor, self.activeColor, self.animDuration, self.animationCallback)
             self.leaveAnimation = self.animate(self.activeColor, self.inactiveColor, self.animDuration, self.animationCallback)
+
+    def changeIcon(self, path):
+        self.iconPath = path
+        if os.path.isfile(self.iconPath):
+            self.px = QPixmap(self.iconPath)
+            self.px.scaled(self.iconResolution, self.iconResolution, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.px_mask = self.px.createMaskFromColor(QColor('transparent'))
+        self.event(QEvent(QEvent.Type.MouseButtonRelease))
+        self.update()
 
     def setColor(self,value): 
         self.__color = value

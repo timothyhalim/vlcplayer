@@ -2,14 +2,32 @@ import sys
 import os
 from PySide2.QtGui import QColor, QPainter
 from PySide2.QtCore import QEvent, QPoint, QRect, QTimer, Qt, Signal
-from PySide2.QtWidgets import QFrame, QLineEdit, QSizeGrip, QSlider, QStyle, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QApplication
+from PySide2.QtWidgets import QFrame, QLineEdit, QSizeGrip, QVBoxLayout, QWidget, QHBoxLayout, QApplication
 
-os.environ['PYTHON_VLC_MODULE_PATH'] = os.path.normpath(os.path.join(__file__, "..", "vlc"))
-os.environ['PYTHON_VLC_LIB_PATH'] = os.path.normpath(os.path.join(__file__, "..", "vlc", "libvlc.dll"))
+try:
+    currentFile = __file__
+except:
+    import inspect
+    currentFile = inspect.getframeinfo(inspect.currentframe()).filename
+
+if not os.path.dirname(currentFile) in sys.path:
+    sys.path.append(os.path.dirname(currentFile))
+    sys.path.append(os.path.join(currentFile, "..", "venv", "Lib", "site-packages"))
+
+pyVersion = float(f"{sys.version_info[0]}.{sys.version_info[1]}")
+vlcdir = os.path.normpath(os.path.join(currentFile, "..", "vlc"))
+if pyVersion >= 3.8:
+    os.path.add_dll_directory(vlcdir)
+else:
+    if not vlcdir in sys.path:
+        sys.path.append(vlcdir)
+    os.environ['PYTHON_VLC_MODULE_PATH'] = vlcdir
+    os.environ['PYTHON_VLC_LIB_PATH'] = os.path.normpath(os.path.join(vlcdir, "libvlc.dll"))
+    
 import vlc
 
 from component.ButtonIcon import ButtonIcon
-from component.TipSlider import TipSlider
+from component.TimeSlider import TimeSlider
 
 class Controller(QWidget):
     closed = Signal()
@@ -29,10 +47,11 @@ class Controller(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0,0,0,0)
 
-        self.resourcePath = os.path.normpath(os.path.join(__file__, "..", "resource")).replace("\\", "/")
+        self.resourcePath = os.path.normpath(os.path.join(currentFile, "..", "resource")).replace("\\", "/")
         
         self.closeBtn = ButtonIcon(icon=f"{self.resourcePath}/cancel.svg", iconsize=15)
         self.closeLayout = QHBoxLayout()
+        self.closeLayout.setContentsMargins(0,5,5,0)
         self.closeLayout.addStretch()
         self.closeLayout.addWidget(self.closeBtn)
 
@@ -41,22 +60,12 @@ class Controller(QWidget):
         self.playLayout.addStretch()
         self.playLayout.addWidget(self.playBtn)
         self.playLayout.addStretch()
-
-        self.timeLayout = QHBoxLayout(self)
-        self.startTime = QLineEdit(self)
-        self.endTime = QLineEdit(self)
-        self.timeLayout.addWidget(self.startTime)
-        self.timeLayout.addStretch()
-        self.timeLayout.addWidget(self.endTime)
-
-        self.timeSlider = TipSlider(Qt.Horizontal, self)
-        self.timeSlider.setMaximum(1000)
+        self.timeSlider = TimeSlider(Qt.Horizontal, self)
         
         layout.addLayout(self.closeLayout)
         layout.addStretch()
         layout.addLayout(self.playLayout)
         layout.addStretch()
-        layout.addLayout(self.timeLayout)
         layout.addWidget(self.timeSlider)
 
         # Signal
@@ -81,7 +90,7 @@ class Controller(QWidget):
         p = self.parent()
         self.move(p.pos().x()+p._gripSize, p.pos().y()+p._gripSize)
         self.resize(p.width()-(p._gripSize*2), p.height()-(p._gripSize*2))
-        for w in (self.closeBtn, self.playBtn, self.startTime, self.endTime):
+        for w in (self.closeBtn, self.playBtn):
             w.setVisible(visible)
         self.timeSlider.setTipVisibility(visible)
         self.timeSlider.setFixedHeight(8 if visible else 1)
@@ -104,7 +113,6 @@ class Controller(QWidget):
         self.move(self.pos()+delta)
         p.move(p.pos()+delta)
         return super(Controller, self).mouseMoveEvent(event)
-
 
     def _onplay(self):
         self.play.emit()
@@ -199,14 +207,15 @@ class VideoPlayer(QWidget):
         self.controllerOpen = False
 
         self.timer = QTimer(self)
-        self.timer.setInterval(10)
+        self.timer.setInterval(100)
         self.timer.timeout.connect(self.updateUI)
 
-        self.playVideo(r"C:\Users\timot\Desktop\TLL_EP001_SH332.00_LAY.mov")
+        self.setRatio(1280/720)
 
     def show(self):
         super(VideoPlayer, self).show()
         self.showController()
+        self.playVideo(os.path.join(currentFile, "..", "sample.mov"))
 
     @property
     def gripSize(self):
@@ -256,17 +265,37 @@ class VideoPlayer(QWidget):
         self.cornerGrips[3].setGeometry(
             QRect(outRect.bottomLeft(), inRect.bottomLeft()+QPoint(offset,-offset)).normalized())
 
+    def setRatio(self, ratio=None):
+        if ratio:
+            self.windowRatio = ratio
+        self.keepRatio(self.size())
+
+    def keepRatio(self, size):
+        newHeight = size.width()/self.windowRatio
+        newHeight -= newHeight%1
+        newHeight += 1
+        if self.height() == newHeight:
+            return
+        self.resize(size.width(), newHeight)
+
     def resizeEvent(self, event):
+        new = event.size()
+        old = event.oldSize()
+        if new == old:
+            return
+        else:
+            self.keepRatio(new)
+        
         self.updateGrips()
         if self.controllerOpen:
             pos = self.pos()
-            self.controller.move(pos.x()+self._gripSize, pos.y()+self._gripSize)
+            self.controller.move(pos.x()+(self._gripSize), pos.y()+(self._gripSize))
             self.controller.resize(self.width()-(self._gripSize*2), self.height()-(self._gripSize*2))
 
     def showController(self):
         pos = self.pos()
         self.controller = Controller(self)
-        self.controller.move(pos.x()+self._gripSize, pos.y()+self._gripSize)
+        self.controller.move(pos.x()+(self._gripSize), pos.y()+(self._gripSize))
         self.controller.resize(self.width()-(self._gripSize*2), self.height()-(self._gripSize*2))
         self.controller.closed.connect(self.closeController)
         self.controller.play.connect(self.play)
@@ -287,22 +316,28 @@ class VideoPlayer(QWidget):
         self.mediaplayer.set_media(self.media)
         print("FPS:", self.mediaplayer.get_fps())
         print("Rate:", self.mediaplayer.get_rate())
+        print("Ratio:", self.mediaplayer.video_get_width()/self.mediaplayer.video_get_height())
+        print("Duration", self.media.get_duration())
+        self.setRatio(self.mediaplayer.video_get_width()/self.mediaplayer.video_get_height())
+
+        duration = self.media.get_duration()
+        self.controller.timeSlider.setMaxTime(duration)
         self.play()
 
     def updateUI(self):
-        media_pos = int((self.mediaplayer.get_position()+0.03) * 1000)
-        self.controller.timeSlider.setValue(media_pos)
+        media_pos = self.mediaplayer.get_position()
+        slider_pos = int((media_pos+(0.03*media_pos)) * 1000)
+        self.controller.timeSlider.setValue(slider_pos)
         
     def play(self):
         if self.mediaplayer.is_playing():
             self.timer.stop()
+            self.controller.playBtn.changeIcon(f"{self.controller.resourcePath}/play.svg")
             self.mediaplayer.pause()
         else:
             self.timer.start()
+            self.controller.playBtn.changeIcon(f"{self.controller.resourcePath}/pause.svg")
             self.mediaplayer.play()
-
-    def pause(self):
-        self.mediaplayer.pause()
 
     def isPlaying(self):
         self.mediaplayer.is_playing()
