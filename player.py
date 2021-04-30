@@ -196,6 +196,10 @@ class Controller(QWidget):
             url = event.mimeData().urls()[0].toString()
             self.mediaPlayer.stop()
             self.createMedia(url)
+        elif event.mimeData().hasText():
+            url =  event.mimeData().text()
+            if os.path.isfile(url):
+                self.createMedia(url)
     
     def wheelEvent(self, event):
         increment = int(self.volumeSlider.maximum() / 10)
@@ -237,16 +241,22 @@ class Controller(QWidget):
         slider_pos = int((media_pos+(0.03*media_pos)) * self.timeSlider.maximum())
         self.timeSlider.setValue(slider_pos)
         
+        # Auto Hide Cursor
         if (datetime.now() - self.lastMove).seconds >= 5 :
             self.setCursor(Qt.BlankCursor)
             self.toggleVisibility(False)
         else:
             self.setCursor(Qt.ArrowCursor)
+            
+        # Repeat
+        if slider_pos >= self.timeSlider.maximum():
+            mediaPath = self.media.get_mrl()
+            self.createMedia(mediaPath)
 
     def createMedia(self, path):
         self.media = self.vlc.media_new(path)
         self.media.parse()
-        print(self.media.get_meta(1))
+        print(self.media.get_meta(0))
         self.mediaPlayer.set_media(self.media)
         print("FPS:", self.mediaPlayer.get_fps())
         print("Ratio:", self.mediaPlayer.video_get_width()/self.mediaPlayer.video_get_height())
@@ -275,7 +285,7 @@ class Controller(QWidget):
                 self.playBtn.changeIcon(f"{self.resourcePath}/pause.svg")
                 self.mediaPlayer.play()
         else:
-            self.createMedia(os.path.join(fileDir, "sample.mov"))
+            self.createMedia(os.path.join(fileDir, "sample.mp4"))
 
     def seek(self):
         if self.mediaPlayer.is_playing():

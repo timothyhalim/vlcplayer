@@ -13,8 +13,17 @@ This project was created for fun only.</p>
 - Git
 
 ## <b>Feature:</b>
-- Simple Media Player
-
+- Minimalist Media Player
+- Toggle Button Visibility on hover
+- Show current time on slider
+- Keep Ratio on resize
+- Drag and drop file
+- Double Click Fullscreen
+- Volume Control
+- Timeslider seek to change video current time
+- Hide cursor after idle for 5 second
+- Play/Pause on click
+- Auto Repeat
 
 ## <b>Todo</b>
 Priority :
@@ -30,18 +39,6 @@ Future :
 - show buffer progress 
 - Youtube with annotation (maybe)
 - Playlist (maybe)
-
-Done :
-- Toggle Button Visibility on hover
-- Show current time on slider
-- Keep Ratio on resize
-- Drag and drop file
-- Double Click Fullscreen
-- Volume Control
-- Timeslider seek to change video current time
-- Hide cursor after idle for 5 second
-- Play/Pause on click
-
 
 ## <b>License</b>
 
