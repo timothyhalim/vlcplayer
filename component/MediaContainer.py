@@ -106,7 +106,6 @@ class MediaContainer(FrameWidget):
             'duration' : self.media.get_duration(),
             'frames' : int(self.media.get_duration()/1000*self.fps)
         }
-        self.play()
 
     def _onFPSChanged(self):
         self.fps = self.mediaPlayer.get_fps()

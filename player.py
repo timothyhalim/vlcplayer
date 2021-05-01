@@ -276,12 +276,13 @@ class Controller(QWidget):
         self.update()
         if event.mimeData().hasUrls():
             url = event.mimeData().urls()[0].toString()
-            self.player.stop()
             self.player.createMedia(url)
+            self.player.play()
         elif event.mimeData().hasText():
             url =  event.mimeData().text()
             if os.path.isfile(url):
                 self.player.createMedia(url)
+                self.player.play()
     
     def keyPressEvent(self, event):
         self.lastMove = datetime.now()
@@ -337,6 +338,11 @@ class Controller(QWidget):
             self.playBtn.changeIcon(f"{self.resourcePath}/play.svg")
         elif state == 'Stopped':
             self.playBtn.changeIcon(f"{self.resourcePath}/play.svg")
+            mediaPath = self.player.media.get_mrl()
+            self.player.createMedia(mediaPath)
+            self.player.pause()
+            self.slide(.99)
+            
         elif state == 'Ended':
             self.timeSlider.setValue(self.timeSlider.maximum())
         elif state == 'Error':
@@ -348,9 +354,9 @@ class Controller(QWidget):
 
     def openFile(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Movie", fileDir, "All (*.*)")
-        
         if fileName != '':
             self.player.createMedia(fileName)
+            self.player.play()
 
     def toggleVisibility(self, visible=True):
         if self.visible == visible:

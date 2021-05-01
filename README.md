@@ -62,17 +62,16 @@ This project was created for fun only.</p>
 </table>
 
 ## <b>Todo</b>
-Priority :
-- Enable seek after video is finished
-- Option to use Frame instead ofe Tim
-- Better button icon for anti aliasing
-
 Future :
 - Overlay 2 video
 - Luminance Compare
 - show buffer progress 
 - Youtube with annotation (maybe)
 - Playlist (maybe)
+- Better button icon for anti aliasing
+
+On Hold :
+- Enable seek after video is finished
 
 ## <b>Changelog:</b>
 1 May 2021
@@ -84,6 +83,8 @@ Future :
 - Right Click Menu
 - Middle Click Seek
 - Add keyboard short cut
+- Show frame on tooltip
+- Auto reset media on play end
 
 30 April 2021
 - Setup buttons and slider and stylesheet
