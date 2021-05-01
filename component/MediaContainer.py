@@ -45,6 +45,8 @@ class MediaContainer(FrameWidget):
         self.mediaPlayer.set_hwnd(int(self.mediaContainer.winId()))
         self.eventManager = self.mediaPlayer.event_manager()
         self.media = None
+        self.setFocusPolicy(Qt.NoFocus)
+        self.mediaContainer.setFocusPolicy(Qt.NoFocus)
 
         self.eventManager.event_attach(vlc.EventType.MediaPlayerNothingSpecial, self._onStateChanged, 'NothingSpecial')
         self.eventManager.event_attach(vlc.EventType.MediaPlayerOpening, self._onStateChanged, 'Opening')
@@ -69,7 +71,7 @@ class MediaContainer(FrameWidget):
     def setController(self, controller):
         self.controller = controller
         self.controller.setParent(self)
-
+        # self.setFocusProxy(self.controller)
 
     def show(self):
         super(MediaContainer, self).show()
@@ -79,16 +81,17 @@ class MediaContainer(FrameWidget):
     def close(self):
         if hasattr(self, "controller"):
             self.controller.close()
-        return super().close()
+        return super(MediaContainer, self).close()
 
     def resizeEvent(self, event):
         super(MediaContainer, self).resizeEvent(event)
         if hasattr(self, "controller"):
-            self.controllerResize()
+            self.resizeController()
 
-    def controllerResize(self):
+    def resizeController(self):
         self.controller.move(self.pos().x()+(self.gripSize)+1, self.pos().y()+(self.gripSize)+1)
         self.controller.resize(self.width()-(self.gripSize*2)-2, self.height()-(self.gripSize*2)-2)
+        self.controller.activateWindow()
 
     def createMedia(self, mediaPath):
         self.media = self.vlc.media_new(mediaPath)

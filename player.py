@@ -2,7 +2,7 @@ import sys
 import os
 from datetime import datetime
 from PySide2.QtGui import QColor, QPainter, QPen
-from PySide2.QtCore import Property, QEvent, QPropertyAnimation, QTimer, Qt
+from PySide2.QtCore import Property, QEvent, QPoint, QPropertyAnimation, QTimer, Qt
 from PySide2.QtWidgets import QAction, QFileDialog, QGraphicsOpacityEffect, QMenu, QPushButton, QSlider, QVBoxLayout, QWidget, QHBoxLayout, QApplication
 
 try:
@@ -27,10 +27,6 @@ class Controller(QWidget):
         self.setMouseTracking(True)
         self.setAcceptDrops(True)
 
-        # self.setContextMenuPolicy(Qt.CustomContextMenu)
-        # self.customContextMenuRequested.connect(self.onRightClick)
-
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0,0,0,0)
 
@@ -52,7 +48,7 @@ class Controller(QWidget):
 
     def setParent(self, parent):
         self.player = parent
-        return super().setParent(parent)
+        return super(Controller, self).setParent(parent)
 
     def setupWidget(self):
         self.closeBtn = ButtonIcon(icon=f"{self.resourcePath}/cancel.svg", iconsize=15)
@@ -150,6 +146,9 @@ class Controller(QWidget):
             self.toggleVisibility(True)
         elif event.type() == QEvent.Type.Leave:
             self.toggleVisibility(False)
+        elif event.type() == QEvent.Type.FocusAboutToChange:
+            print("FOCUS!!")
+            self.setFocus()
 
         return super(Controller, self).event(event)
 
@@ -202,19 +201,19 @@ class Controller(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             if hasattr(self, "startPos"):
-                if (datetime.now() - self.lastClick).microseconds/1000 < 100:
+                if (datetime.now() - self.lastClick).microseconds/1000 < 300:
                     self.togglePlay()
                 delattr(self, "startPos")
 
         elif event.button() == Qt.MouseButton.RightButton:
-            self.popMenu.exec_(self.mapToGlobal(event.pos())) 
+            self.onRightClick(event.pos())
             
         elif self.lastButton == Qt.MouseButton.MiddleButton:
             if hasattr(self, "startPos"): delattr(self, "startPos")
             if hasattr(self, "startFrame"): delattr(self, "startFrame")
 
         self.lastButton = None
-        return super().mouseReleaseEvent(event)
+        return super(Controller, self).mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
         self.lastMove = datetime.now()
@@ -245,7 +244,7 @@ class Controller(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self.toggleFullscreen()
 
-        return super().mouseDoubleClickEvent(event)
+        return super(Controller, self).mouseDoubleClickEvent(event)
 
     def wheelEvent(self, event):
         increment = int(self.volumeSlider.maximum() / 10)
@@ -253,7 +252,7 @@ class Controller(QWidget):
             self.volumeSlider.setValue(self.volumeSlider.value()+increment)
         elif (event.angleDelta().y()) < 0 :
             self.volumeSlider.setValue(self.volumeSlider.value()-increment)
-        return super().wheelEvent(event)
+        return super(Controller, self).wheelEvent(event)
 
     def dragEnterEvent(self, event):
         self.drawDrag = True
@@ -268,7 +267,7 @@ class Controller(QWidget):
     def dragLeaveEvent(self, event):
         self.drawDrag = False
         self.update()
-        return super().dragLeaveEvent(event)
+        return super(Controller, self).dragLeaveEvent(event)
 
     def dropEvent(self, event):
         self.drawDrag = False
@@ -283,8 +282,37 @@ class Controller(QWidget):
                 self.player.createMedia(url)
     
     def keyPressEvent(self, event):
-        print(event.key())
-        return super().keyPressEvent(event)
+        self.lastMove = datetime.now()
+        self.toggleVisibility(True)
+
+        if event.key() in [Qt.Key_Left, Qt.Key_A, Qt.Key_Less, Qt.Key_Comma]:
+            self.player.pause()
+            self.timeSlider.setValue(self.timeSlider.value()-1)
+            self.seek()
+        elif event.key() in [Qt.Key_Right, Qt.Key_D, Qt.Key_Greater, Qt.Key_Period]:
+            self.player.pause()
+            self.timeSlider.setValue(self.timeSlider.value()+1)
+            self.seek()
+        elif event.key() in [Qt.Key_Up, Qt.Key_Plus]:
+            self.volumeSlider.setValue(self.volumeSlider.value()+5)
+        elif event.key() in [Qt.Key_Down, Qt.Key_Minus]:
+            self.volumeSlider.setValue(self.volumeSlider.value()-5)
+        elif event.key() in [Qt.Key_Space]:
+            self.togglePlay()
+        elif event.key() in [Qt.Key_Return, Qt.Key_Enter, Qt.Key_O]:
+            self.openFile()
+        elif event.key() in [Qt.Key_F11, Qt.Key_F]:
+            self.toggleFullscreen()
+        elif event.key() in [Qt.Key_Tab, Qt.Key_L]:
+            print("Open Playlist")
+        elif event.key() in [Qt.Key_Slash, Qt.Key_Question]:
+            print("Open Help")
+        elif event.key() in [Qt.Key_Menu]:
+            self.onRightClick(QPoint(0,0))
+        elif event.key() in [Qt.Key_Escape]:
+            self.player.close()
+
+        return super(Controller, self).keyPressEvent(event)
 
     def onLengthChanged(self, length):
         self.timeSlider.setMaxTime(length)
@@ -313,6 +341,7 @@ class Controller(QWidget):
             return
 
     def onRightClick(self, point):
+        self.fullAct.setChecked(self.player.isFullScreen())
         self.popMenu.exec_(self.mapToGlobal(point))   
 
     def openFile(self):
@@ -340,7 +369,6 @@ class Controller(QWidget):
             a.start()
 
         self.timeSlider.setTipVisibility(visible)
-        # self.timeSlider.setFixedHeight()
 
     def toggleCursor(self):
         if (datetime.now() - self.lastMove).seconds >= 5 :
@@ -354,8 +382,7 @@ class Controller(QWidget):
             self.player.showNormal()
         else:
             self.player.showFullScreen()
-        self.fullAct.setChecked(self.player.isFullScreen())
-        self.player.controllerResize()
+        self.player.resizeController()
 
     def togglePlay(self):
         if not self.player.media:
