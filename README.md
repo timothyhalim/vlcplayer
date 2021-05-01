@@ -63,15 +63,17 @@ This project was created for fun only.</p>
 
 ## <b>Todo</b>
 Future :
-- Overlay 2 video
-- Luminance Compare
-- show buffer progress 
+- Show buffer progress 
 - Youtube with annotation (maybe)
 - Playlist (maybe)
+- Next Prev
 - Better button icon for anti aliasing
+- Pin on top
 
 On Hold :
-- Enable seek after video is finished
+- Enable seek after video is finished (Solution not found yet)
+- Overlay 2 video (Multiple instance supported but seems like no transparency option)
+- Luminance Compare
 
 ## <b>Changelog:</b>
 1 May 2021

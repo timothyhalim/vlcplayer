@@ -65,6 +65,9 @@ class MediaContainer(FrameWidget):
         hbox.addWidget(self.mediaContainer)
         self.setLayout(hbox)
 
+        
+        self._isOnTop = False
+
         if controller:
             self.setController(controller)
 
@@ -87,6 +90,13 @@ class MediaContainer(FrameWidget):
         super(MediaContainer, self).resizeEvent(event)
         if hasattr(self, "controller"):
             self.resizeController()
+
+    def onTop(self, state):
+        self._isOnTop = state
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, state) 
+
+    def isOnTop(self):
+        return self._isOnTop
 
     def resizeController(self):
         self.controller.move(self.pos().x()+(self.gripSize)+1, self.pos().y()+(self.gripSize)+1)

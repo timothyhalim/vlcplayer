@@ -2,7 +2,7 @@ import sys
 import os
 from datetime import datetime
 from PySide2.QtGui import QColor, QPainter, QPen
-from PySide2.QtCore import Property, QEvent, QPoint, QPropertyAnimation, QTimer, Qt
+from PySide2.QtCore import Property, QAbstractAnimation, QEvent, QPoint, QPropertyAnimation, QTimer, Qt
 from PySide2.QtWidgets import QAction, QFileDialog, QGraphicsOpacityEffect, QMenu, QPushButton, QSlider, QVBoxLayout, QWidget, QHBoxLayout, QApplication
 
 try:
@@ -33,6 +33,7 @@ class Controller(QWidget):
         self.fillColor = QColor(127, 127, 127, 2)
         self.penColor = QColor(127, 127, 127, 2)
 
+        self.onTop = False
         self.visible = False
         self.drawDrag = False
         self.isPaused = False
@@ -51,44 +52,63 @@ class Controller(QWidget):
         return super(Controller, self).setParent(parent)
 
     def setupWidget(self):
+        # Top
+        self.pinBtn = ButtonIcon(icon=f"{self.resourcePath}/pin.svg", iconsize=15)
         self.closeBtn = ButtonIcon(icon=f"{self.resourcePath}/cancel.svg", iconsize=15)
-        self.closeLayout = QHBoxLayout()
-        self.closeLayout.setContentsMargins(0,5,5,0)
-        self.closeLayout.addStretch()
-        self.closeLayout.addWidget(self.closeBtn)
+        self.topLayout = QHBoxLayout()
+        self.topLayout.setContentsMargins(5,5,5,5)
+        self.topLayout.addWidget(self.pinBtn)
+        self.topLayout.addStretch()
+        self.topLayout.addWidget(self.closeBtn)
 
+        # Middle
         self.playBtn = ButtonIcon(icon=f"{self.resourcePath}/play.svg", iconsize=100)
         self.volumeSlider = QSlider(Qt.Vertical, self)
         self.volumeSlider.setMaximum(100)
         self.volumeSlider.setValue(100)
+        self.volumeBtn = ButtonIcon(icon=f"{self.resourcePath}/speaker.svg", iconsize=15)
+        self.volumeLayout = QVBoxLayout()
+        self.volumeLayout.setContentsMargins(0,0,0,0)
+        for w in (self.volumeSlider, self.volumeBtn):
+            self.volumeLayout.addWidget(w)
         
-        self.timeSlider = TimeSlider(Qt.Horizontal, self)
-        self.volumeSlider.setStyleSheet(self.timeSlider.qss())
-
         self.playLayout = QHBoxLayout()
         self.playLayout.addStretch()
         self.playLayout.addWidget(self.playBtn)
         self.playLayout.addStretch()
-        self.playLayout.addWidget(self.volumeSlider)
+        self.playLayout.addLayout(self.volumeLayout)
+
+        # Bottom
+        self.addBtn = ButtonIcon(icon=f"{self.resourcePath}/plus.svg", iconsize=15)
+        self.timeSlider = TimeSlider(Qt.Horizontal, self)
+        self.volumeSlider.setStyleSheet(self.timeSlider.qss())
+        self.repeatBtn = ButtonIcon(icon=f"{self.resourcePath}/replay.svg", iconsize=15)
+        self.listBtn = ButtonIcon(icon=f"{self.resourcePath}/list.svg", iconsize=15)
+        self.bottomLayout = QHBoxLayout()
+        self.bottomLayout.setContentsMargins(0,0,0,0)
+        self.bottomLayout.addWidget(self.addBtn)
+        self.bottomLayout.addWidget(self.listBtn)
+        self.bottomLayout.addWidget(self.timeSlider)
+        self.bottomLayout.addWidget(self.repeatBtn)
         
-        self.layout().addLayout(self.closeLayout)
+        self.layout().addLayout(self.topLayout)
         self.layout().addStretch()
         self.layout().addLayout(self.playLayout)
         self.layout().addStretch()
-        self.layout().addWidget(self.timeSlider)
+        self.layout().addLayout(self.bottomLayout)
 
         self.timer = QTimer()
         self.timer.setInterval(50)
         self.timer.timeout.connect(self.toggleCursor)
         self.timer.start()
 
-        self.fx = []
-        for w in (self.closeBtn, self.playBtn, self.volumeSlider):
+        self.opacFX = []
+        for w in (self.pinBtn, self.closeBtn, self.playBtn, self.volumeSlider, self.volumeBtn, self.addBtn, self.repeatBtn, self.listBtn):
             w.setFocusProxy(self)
-            fx = QGraphicsOpacityEffect()
+            fx = QGraphicsOpacityEffect(w)
             fx.setOpacity(0)
             w.setGraphicsEffect(fx)
-            self.fx.append(fx)
+            self.opacFX.append(fx)
         self.timeSlider.setHeight(1)
         self.timeSlider.setFocusProxy(self)
 
@@ -96,6 +116,7 @@ class Controller(QWidget):
         self.popMenu = QMenu(self)
         self.openAct = QAction('Open File', self)
         self.fullAct = QAction('Fullscreen', self)
+        self.atopAct = QAction('Pin on Top', self)
         self.listAct = QAction('Playlist', self)
         self.helpAct = QAction('Help', self)
         self.exitAct = QAction('Exit', self)
@@ -113,23 +134,35 @@ class Controller(QWidget):
         self.listAct.setDisabled(True)
         self.helpAct.setDisabled(True)
 
-    def hoverAnimation(self, end, duration):
+    def opacityAnimation(self, end, duration, callback):
         anims = []
-        for fx in self.fx:
+        for fx in self.opacFX:
             ani = QPropertyAnimation(fx, b"opacity")
             ani.setStartValue(fx.opacity())
             ani.setEndValue(end)
             a = max(fx.opacity(), end)
             i = min(fx.opacity(), end)
             ani.setDuration((a-i)*duration)
+            ani.stateChanged.connect(callback)
             anims.append(ani)
         return anims
+
+    def heightAnimation(self, target, height, duration, callback):
+        ani = QPropertyAnimation(target, b"Height")
+        ani.setStartValue(target.getHeight())
+        ani.setEndValue(height)
+        a = max(target.getHeight(), height)
+        i = min(target.getHeight(), height)
+        ani.setDuration((a-i)/a*duration)
+        # ani.finished.connect(callback)
+        return ani
 
     def setupSignal(self):
         # Controller 
         self.closeBtn.clicked.connect(self.player.close)
         self.playBtn.clicked.connect(self.togglePlay)
         self.volumeSlider.valueChanged.connect(self.player.setVolume)
+        self.addBtn.clicked.connect(self.openFile)
         self.timeSlider.sliderMoved.connect(self.seek)
 
         # Player
@@ -148,10 +181,6 @@ class Controller(QWidget):
             self.toggleVisibility(True)
         elif event.type() == QEvent.Type.Leave:
             self.toggleVisibility(False)
-        elif event.type() == QEvent.Type.FocusAboutToChange:
-            print("FOCUS!!")
-            self.setFocus()
-
         return super(Controller, self).event(event)
 
     def paintEvent(self, event):
@@ -337,7 +366,7 @@ class Controller(QWidget):
         elif state == 'Paused':
             self.playBtn.changeIcon(f"{self.resourcePath}/play.svg")
         elif state == 'Stopped':
-            self.playBtn.changeIcon(f"{self.resourcePath}/play.svg")
+            self.playBtn.changeIcon(f"{self.resourcePath}/replay.svg")
             mediaPath = self.player.media.get_mrl()
             self.player.createMedia(mediaPath)
             self.player.pause()
@@ -358,6 +387,12 @@ class Controller(QWidget):
             self.player.createMedia(fileName)
             self.player.play()
 
+    def toggleWidget(self, state):
+        if (self.sender().endValue() > 0 and state == QAbstractAnimation.State.Running) :
+            self.sender().targetObject().parent().show()
+        elif (self.sender().endValue() <= 0 and state == QAbstractAnimation.State.Stopped) :
+            self.sender().targetObject().parent().hide()
+
     def toggleVisibility(self, visible=True):
         if self.visible == visible:
             return
@@ -368,15 +403,19 @@ class Controller(QWidget):
         self.move(self.player.pos().x()+self.player.gripSize, self.player.pos().y()+self.player.gripSize)
         self.resize(self.player.width()-(self.player.gripSize*2), self.player.height()-(self.player.gripSize*2))
 
-        self.anims = self.hoverAnimation(1 if visible else 0, 300)
-        heightAni = QPropertyAnimation(self.timeSlider, b"Height")
-        heightAni.setStartValue(self.timeSlider.getHeight())
-        heightAni.setEndValue(16 if visible else 1)
-        self.anims.append(heightAni)
+        self.anims = self.opacityAnimation(1 if visible else 0, 300, self.toggleWidget)
+        self.anims += [self.heightAnimation(w, 20 if visible else 1, 300, self.toggleWidget) for w in (self.addBtn, self.timeSlider, self.listBtn, self.repeatBtn)]
         for a in self.anims:
             a.start()
 
         self.timeSlider.setTipVisibility(visible)
+
+    def toggleOnTop(self):
+        # self.onTop = not self.onTop
+        self.player.onTop(not self.player.isOnTop())
+        self.player.update()
+        self.setWindowFlag(Qt.WindowStaysOnBottomHint, not self.player.isOnTop()) 
+        self.player.update()
 
     def toggleCursor(self):
         if (datetime.now() - self.lastMove).seconds >= 5 :

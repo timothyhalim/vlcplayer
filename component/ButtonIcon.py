@@ -36,6 +36,12 @@ class ButtonIcon(QPushButton):
             self.hoverAnimation = self.animate(self.inactiveColor, self.activeColor, self.animDuration, self.animationCallback)
             self.leaveAnimation = self.animate(self.activeColor, self.inactiveColor, self.animDuration, self.animationCallback)
 
+    def setHeight(self,value): 
+        self.setFixedHeight(value)
+        self.setFixedWidth(value)
+    def getHeight(self): return self.height()
+    Height = Property(int, getHeight, setHeight)
+
     def changeIcon(self, path):
         self.iconPath = path
         if os.path.isfile(self.iconPath):
