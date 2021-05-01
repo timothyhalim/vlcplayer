@@ -36,7 +36,7 @@ class TimeSlider(QSlider):
             pos_local = rectHandle.topLeft() + self.offset
             pos_global = self.mapToGlobal(pos_local)
             currentms = self.maxTime * (float(self.value()) / self.maximum())
-            currentTime = f"{int(currentms / (1000*60*60)) % 24:02d}:{int(currentms / (1000*60)) % 60:02d}:{(currentms / (1000)) % 60:04.02f}"
+            currentTime = f"{int(currentms / (1000*60*60)) % 24:02d}:{int(currentms / (1000*60)) % 60:02d}:{(currentms / (1000)) % 60:04.02f} ({self.value()})"
             self.tip = QToolTip.showText(pos_global, currentTime, self)
 
     def qss(self):

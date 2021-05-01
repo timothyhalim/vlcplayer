@@ -84,11 +84,13 @@ class Controller(QWidget):
 
         self.fx = []
         for w in (self.closeBtn, self.playBtn, self.volumeSlider):
+            w.setFocusProxy(self)
             fx = QGraphicsOpacityEffect()
             fx.setOpacity(0)
             w.setGraphicsEffect(fx)
             self.fx.append(fx)
         self.timeSlider.setHeight(1)
+        self.timeSlider.setFocusProxy(self)
 
     def setupRightClick(self):
         self.popMenu = QMenu(self)

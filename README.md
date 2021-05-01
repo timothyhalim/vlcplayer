@@ -13,11 +13,58 @@ This project was created for fun only.</p>
 - LibVLC (included is dll for win 64)
 - Git
 
+## <b>Keyboard Shortcut</b>
+<table>
+    <tr>
+        <th>Key</th>
+        <th>Function</th>
+    </tr>
+    <tr>
+        <td>Left (←), A, Less (<), Comma(,)</td>
+        <td>Go to the previous frame</td>
+    </tr>
+    <tr>
+        <td>Right(→), D, Greater(>), Period(.)</td>
+        <td>Go to the previous frame</td>
+    </tr>
+    <tr>
+        <td>Up(↑), Plus(+)</td>
+        <td>Increase volume by 5</td>
+    </tr>
+    <tr>
+        <td>Down(↓), Minus(-)</td>
+        <td>Decrease volume by 5</td>
+    </tr>
+    <tr>
+        <td>Space</td>
+        <td>Toggle Play/Pause</td>
+    </tr>
+    <tr>
+        <td>Enter/Return(⮨), O</td>
+        <td>Open File Dialog</td>
+    </tr>
+    <tr>
+        <td>F11, F</td>
+        <td>Toggle Fullscreen</td>
+    </tr>
+    <tr>
+        <td>Tab, L</td>
+        <td>open Playlist (Not working yet)</td>
+    </tr>
+    <tr>
+        <td>Slash(/), Question Mark(?)</td>
+        <td>Open Help (Not working yet)</td>
+    </tr>
+    <tr>
+        <td>Escape</td>
+        <td>Exit Player</td>
+    </tr>
+</table>
+
 ## <b>Todo</b>
 Priority :
 - Enable seek after video is finished
-- Option to use Frame instead of Time
-- Key press event left or right to scrub frame, and up or down for volume
+- Option to use Frame instead ofe Tim
 - Better button icon for anti aliasing
 
 Future :
