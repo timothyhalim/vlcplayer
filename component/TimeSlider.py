@@ -1,4 +1,4 @@
-from PySide2.QtCore import QPoint
+from PySide2.QtCore import Property, QPoint
 from PySide2.QtWidgets import QApplication, QSlider, QStyleOptionSlider, QToolTip
 
 class TimeSlider(QSlider):
@@ -12,8 +12,8 @@ class TimeSlider(QSlider):
         self.opt = QStyleOptionSlider()
         self.setMaximum(1000)
 
-        self.valueChanged.connect(self.show_tip)
-        self.enterEvent = self.show_tip
+        self.valueChanged.connect(self.showTip)
+        self.enterEvent = self.showTip
         self.setTipVisibility(True)
 
         self.setStyleSheet(self.qss())
@@ -24,7 +24,11 @@ class TimeSlider(QSlider):
     def setTipVisibility(self, visible):
         self.tipVisible = visible
 
-    def show_tip(self, _):
+    def setHeight(self,value): self.setFixedHeight(value)
+    def getHeight(self): return self.height()
+    Height = Property(int, getHeight, setHeight)
+
+    def showTip(self, _):
         if self.isVisible() and self.tipVisible:
             self.initStyleOption(self.opt)
             rectHandle = self.style.subControlRect(self.style.CC_Slider, self.opt, self.style.SC_SliderHandle)
