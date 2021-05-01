@@ -57,6 +57,8 @@ class MediaContainer(FrameWidget):
         self.eventManager.event_attach(vlc.EventType.MediaPlayerEndReached, self._onStateChanged, 'Ended')
         self.eventManager.event_attach(vlc.EventType.MediaPlayerEncounteredError, self._onStateChanged, 'Error')
 
+        self.eventManager.event_attach(vlc.EventType.MediaPlayerBuffering, self._onBuffer)
+
         self.eventManager.event_attach(vlc.EventType.MediaPlayerLengthChanged, self._onPlayerLengthChanged)
         self.eventManager.event_attach(vlc.EventType.MediaPlayerPositionChanged, self._onTimeChanged)
 
@@ -123,7 +125,16 @@ class MediaContainer(FrameWidget):
 
     def _onStateChanged(self, event, state):
         self.state = state
+        if self.state == "Playing":
+            self.media.parse()
+            self._onPlayerLengthChanged(None)
         self.stateChanged.emit(state)
+
+    def _onBuffer(self, event):
+        ...
+        # print(dir(event))
+        # print(vars(event))
+        # print(event.getBuffering())
 
     def _onPlayerLengthChanged(self, event):
         self.media = self.mediaPlayer.get_media()
@@ -139,6 +150,7 @@ class MediaContainer(FrameWidget):
 
     def play(self):
         if self.media:
+            print("Playing", self.media.get_mrl())
             self.mediaPlayer.play()
         
     def pause(self):

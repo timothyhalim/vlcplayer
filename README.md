@@ -63,19 +63,22 @@ This project was created for fun only.</p>
 
 ## <b>Todo</b>
 Future :
-- Show buffer progress 
-- Youtube with annotation (maybe)
+- Youtube annotation (maybe)
 - Playlist (maybe)
-- Next Prev
 - Better button icon for anti aliasing
 - Pin on top
 
 On Hold :
+- Show buffer progress (not supported by libvlc https://forum.videolan.org/viewtopic.php?t=145746)
 - Enable seek after video is finished (Solution not found yet)
 - Overlay 2 video (Multiple instance supported but seems like no transparency option)
 - Luminance Compare
 
 ## <b>Changelog:</b>
+2 May 2021
+- Add Pin Button, Repeat Button, Add Button, Playlist Button, Volume Button 
+- Youtube support using pafy
+
 1 May 2021
 - Update using libvlc4
 - Using libvlc callback instead of QTimer

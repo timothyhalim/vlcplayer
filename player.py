@@ -1,19 +1,20 @@
 import sys
 import os
 from datetime import datetime
-from PySide2.QtGui import QColor, QPainter, QPen
+from PySide2.QtGui import QColor, QKeySequence, QPainter, QPen
 from PySide2.QtCore import Property, QAbstractAnimation, QEvent, QPoint, QPropertyAnimation, QTimer, Qt
 from PySide2.QtWidgets import QAction, QFileDialog, QGraphicsOpacityEffect, QMenu, QPushButton, QSlider, QVBoxLayout, QWidget, QHBoxLayout, QApplication
+import pafy
+
+from component.ButtonIcon import ButtonIcon
+from component.TimeSlider import TimeSlider
+from component.MediaContainer import MediaContainer
 
 try:
     fileDir = os.path.dirname(__file__)
 except:
     import inspect
     fileDir = os.path.dirname(inspect.getframeinfo(inspect.currentframe()).filename)
-
-from component.ButtonIcon import ButtonIcon
-from component.TimeSlider import TimeSlider
-from component.MediaContainer import MediaContainer
 
 class Controller(QWidget):
     def __init__(self, parent=None):
@@ -316,7 +317,6 @@ class Controller(QWidget):
     def keyPressEvent(self, event):
         self.lastMove = datetime.now()
         self.toggleVisibility(True)
-
         if event.key() in [Qt.Key_Left, Qt.Key_A, Qt.Key_Less, Qt.Key_Comma]:
             self.player.pause()
             self.timeSlider.setValue(self.timeSlider.value()-1)
@@ -343,6 +343,18 @@ class Controller(QWidget):
             self.onRightClick(QPoint(0,0))
         elif event.key() in [Qt.Key_Escape]:
             self.player.close()
+        elif QKeySequence(event.key()+int(event.modifiers())) == QKeySequence("Ctrl+V"):
+            url = QApplication.clipboard().text()
+            if "youtube.com" in url.lower():
+                video = pafy.new(url)
+                best = video.getbest()
+                playurl = best.url
+                while not playurl:
+                    pass
+            else:
+                playurl = url
+            self.player.createMedia(playurl)
+            self.player.play()
 
         return super(Controller, self).keyPressEvent(event)
 
