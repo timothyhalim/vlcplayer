@@ -1,2 +1,9 @@
+ffmpeg-python
+future
+numpy
+pafy
+pyee
 PySide2
 python-vlc
+shiboken2
+youtube-dl

@@ -347,12 +347,12 @@ class Controller(QWidget):
             url = QApplication.clipboard().text()
             if "youtube.com" in url.lower():
                 video = pafy.new(url)
-                best = video.getbest()
-                playurl = best.url
+                stream = video.allstreams[-1]
+                playurl = stream.url
                 while not playurl:
                     pass
             else:
-                playurl = url
+                playurl = url.replace("\"", "")
             self.player.createMedia(playurl)
             self.player.play()
 
