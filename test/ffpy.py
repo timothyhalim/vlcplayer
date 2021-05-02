@@ -2,7 +2,7 @@ import os
 import datetime
 import numpy as np
 
-from PySide2.QtCore import QTimer
+from PySide2.QtCore import QBuffer, QByteArray, QIODevice, QTimer
 from PySide2.QtGui import QImage, QPainter, QPixmap
 from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtMultimedia import QAudioFormat, QAudioOutput
@@ -15,7 +15,7 @@ class Image(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self, parent=parent)
         
-        file = '60.mp4'
+        file = '30.mp4'
 
         probe = ffmpeg.probe(file)
         audio_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'audio'), None)
@@ -65,7 +65,7 @@ class Image(QWidget):
         aout, _ = (
             ffmpeg
             .input(file)
-            .output('pipe:', format='f64le', acodec="pcm_f64le", ac=str(self.channels), vframes=self.trim)
+            .output('pipe:', format='f64le', acodec="pcm_f64le", ac="1", vframes=self.trim)
             .run(capture_stdout=True)
         )
         self.audio = (
@@ -73,6 +73,10 @@ class Image(QWidget):
             .frombuffer(aout, np.float64)
             .reshape([-1, self.channels])
         )
+        data = QByteArray(self.audio.tobytes())
+        buffer = QBuffer(data)
+        buffer.open(QIODevice.ReadOnly)
+        buffer.seek(0)
 
         print(self.audio)
         print(self.video.shape)
@@ -85,8 +89,9 @@ class Image(QWidget):
         format.setCodec ( "audio / pcm" ) 
         format.setByteOrder (QAudioFormat.LittleEndian )
         format.setSampleType (QAudioFormat.SignedInt)
-        self.audio = QAudioOutput ( format , self)
-        self.stream = self.audio.start()
+        self.audio = QAudioOutput ( format , self )
+        self.stream = self.audio.start(buffer)
+        print(self.stream)
         
         self.frames = self.video.shape[0]
         height = self.video.shape[1]
@@ -125,7 +130,6 @@ class Image(QWidget):
         print(self.frame, delta, int(delta%1 * self.fps))
         image = QImage(self.video[self.frame], self.video_width, self.video_height, QImage.Format_RGB888)
         self.pixmap = QPixmap(image)
-        self.stream.write( self.audio )
     
         self.update()
 
