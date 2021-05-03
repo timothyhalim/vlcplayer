@@ -9,7 +9,7 @@ os.environ['FFMPEG'] = os.path.normpath(os.path.join(__file__,"..", "..", "ffmpe
 os.environ['FFPROBE'] = os.path.normpath(os.path.join(__file__,"..", "..", "ffmpeg", "bin","ffprobe.exe")).replace("\\", "/")
 import ffmpeg 
 
-file = "30.mp4"
+file = "60.mp4"
 probe = ffmpeg.probe(file)
 
 audio_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'audio'), None)
@@ -63,7 +63,7 @@ started = False
 def play():
     # print(audio.bufferSize())
     # print(audio.bytesFree())
-    if audio.bytesFree() == audio.bufferSize():
+    if audio.bytesFree() >= 0:
         if t.started:
             data.remove(0, audio.bytesFree())
         stream.write(data)
@@ -71,7 +71,7 @@ def play():
         # print(dir(stream))
         
 t = QTimer(w)
-t.setInterval(10)
+t.setInterval(1)
 t.timeout.connect(play)
 t.started = False
 t.start()
